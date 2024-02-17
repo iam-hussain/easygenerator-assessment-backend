@@ -3,10 +3,12 @@ import {
   UnauthorizedException,
   BadRequestException,
   UnprocessableEntityException,
+  NotAcceptableException,
 } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import { CreateUserDto } from '../dto/createUser.dto';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
@@ -44,6 +46,11 @@ export class AuthService {
         access_token: await this.jwtService.signAsync(payload),
       };
     } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2002') {
+          throw new NotAcceptableException();
+        }
+      }
       throw new UnprocessableEntityException();
     }
   }
