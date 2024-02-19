@@ -27,7 +27,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @Post('register')
   register(@Body() signUpDto: SignUpDto) {
-    return this.authService.signUp({ ...signUpDto, salt: 'some' });
+    return this.authService.signUp(signUpDto);
   }
 
   @Get('check')

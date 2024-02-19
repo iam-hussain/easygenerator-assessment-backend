@@ -4,7 +4,6 @@ import {
   IsOptional,
   IsString,
   Matches,
-  //   isStrongPassword,
 } from 'class-validator';
 
 export class SignUpDto {

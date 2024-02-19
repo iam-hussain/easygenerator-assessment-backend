@@ -3,12 +3,13 @@ import {
   UnauthorizedException,
   BadRequestException,
   UnprocessableEntityException,
-  NotAcceptableException,
+  PreconditionFailedException,
 } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
-import { CreateUserDto } from '../dto/createUser.dto';
 import { Prisma } from '@prisma/client';
+import { pbkdf2Sync, generateKeySync } from 'crypto';
+import { SignUpDto } from 'src/dto/signUp.dto';
 
 @Injectable()
 export class AuthService {
@@ -27,7 +28,12 @@ export class AuthService {
     if (!user || !user.email) {
       throw new BadRequestException();
     }
-    if (user.password !== password) {
+    const validatePassword = this.verifyPasswordHash(
+      password,
+      user.password,
+      user.salt,
+    );
+    if (!validatePassword) {
       throw new UnauthorizedException();
     }
     const payload = { sub: user.email };
@@ -36,11 +42,16 @@ export class AuthService {
     };
   }
 
-  async signUp(userInput: CreateUserDto): Promise<{
+  async signUp(userInput: SignUpDto): Promise<{
     access_token: string;
   }> {
     try {
-      const user = await this.usersService.create(userInput);
+      const [hash, salt] = this.generatePasswordHash(userInput.password);
+      const user = await this.usersService.create({
+        ...userInput,
+        password: hash,
+        salt,
+      });
       const payload = { sub: user.email };
       return {
         access_token: await this.jwtService.signAsync(payload),
@@ -48,10 +59,27 @@ export class AuthService {
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2002') {
-          throw new NotAcceptableException();
+          throw new PreconditionFailedException();
         }
       }
       throw new UnprocessableEntityException();
     }
+  }
+
+  private passwordHashWithSalt(input: string, salt: string) {
+    return pbkdf2Sync(input, salt, 1000, 64, `sha512`).toString(`hex`);
+  }
+
+  private generatePasswordHash(password: string) {
+    const salt = generateKeySync('hmac', { length: 512 })
+      .export()
+      .toString('hex');
+
+    return [this.passwordHashWithSalt(password, salt), salt];
+  }
+
+  private verifyPasswordHash(password: string, hash: string, salt: string) {
+    const passwordHash = this.passwordHashWithSalt(password, salt);
+    return hash === passwordHash;
   }
 }
