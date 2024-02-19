@@ -1,6 +1,5 @@
 import {
   Injectable,
-  UnauthorizedException,
   BadRequestException,
   UnprocessableEntityException,
   PreconditionFailedException,
@@ -26,7 +25,7 @@ export class AuthService {
   }> {
     const user = await this.usersService.findOne({ email });
     if (!user || !user.email) {
-      throw new BadRequestException();
+      throw new PreconditionFailedException();
     }
     const validatePassword = this.verifyPasswordHash(
       password,
@@ -34,7 +33,7 @@ export class AuthService {
       user.salt,
     );
     if (!validatePassword) {
-      throw new UnauthorizedException();
+      throw new UnprocessableEntityException();
     }
     const payload = { sub: user.email };
     return {
@@ -62,7 +61,7 @@ export class AuthService {
           throw new PreconditionFailedException();
         }
       }
-      throw new UnprocessableEntityException();
+      throw new BadRequestException();
     }
   }
 
