@@ -3,6 +3,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  Matches,
   //   isStrongPassword,
 } from 'class-validator';
 
@@ -12,13 +13,10 @@ export class SignUpDto {
 
   @IsNotEmpty()
   @IsString()
-  //   @isStrongPassword({
-  //     minLength: 8,
-  //     minLowercase: 0,
-  //     minNumbers: 1,
-  //     minSymbols: 1,
-  //     minUppercase: 0,
-  //   })
+  @Matches(/(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/, {
+    message:
+      'password need to be minimum eight characters, at least one letter, one number and one special character',
+  })
   password: string;
 
   @IsOptional()
